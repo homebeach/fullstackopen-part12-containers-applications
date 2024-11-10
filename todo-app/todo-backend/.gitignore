@@ -60,4 +60,7 @@ typings/
 # next.js build output
 .next
 
+# ignore data folders
 /data/db
+redis_data
+._redis_data
