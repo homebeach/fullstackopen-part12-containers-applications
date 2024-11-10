@@ -52,12 +52,6 @@ singleRouter.put('/', async (req, res) => {
   res.send(updatedTodo);
 });
 
-/* GET statistics. */
-router.get('/statistics', async (_, res) => {
-  const addedTodos = await redis.getAsync('added_todos') || 0;
-  res.json({ added_todos: parseInt(addedTodos) });
-});
-
 router.use('/:id', findByIdMiddleware, singleRouter);
 
 module.exports = router;
