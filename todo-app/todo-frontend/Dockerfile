@@ -1,49 +1,45 @@
-# Step 1: Use a Node.js image as the base for building the frontend
-FROM node:18 AS build
+# Stage 1: Development image with Node.js
+FROM node:18 AS dev
 
-# Step 2: Set the working directory in the container
+# Set the working directory in the container
 WORKDIR /app
 
-# Step 3: Copy the package.json and package-lock.json to install dependencies
+# Copy the package.json and package-lock.json to install dependencies
 COPY package*.json ./
 
-# Step 4: Install dependencies
+# Install dependencies
 RUN npm install
 
-# Step 5: Copy the rest of the application source code
+# Copy the rest of the application source code
 COPY . .
 
-# Step 6: Set the environment variable for the backend URL
+# Set the environment variable for the backend URL
 ARG VITE_BACKEND_URL
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
-# Step 7: Run tests before building the app (optional: using vitest here)
-RUN npm run test
-
-# Step 8: Build the React application with the backend URL embedded
-RUN npm run build
-
-# Step 9: Use a lightweight web server to serve the static files
-FROM nginx:alpine
-
-# Step 10: Create a non-root user and group, and switch to that user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Step 11: Copy the custom NGINX config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Step 12: Adjust permissions on the NGINX config directory and files
-RUN chmod -R 644 /etc/nginx/nginx.conf && \
-	chown -R appuser:appgroup /var/cache/nginx /var/run /var/log/nginx /etc/nginx/nginx.conf
-
-# Step 13: Copy the built files from the previous stage to the nginx html folder
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Step 14: Switch to non-root user
-USER appuser
-
-# Step 15: Expose port 80 for accessing the application
+# Expose the port for development (typically the dev server runs on port 80)
 EXPOSE 80
 
-# Step 16: Start nginx when the container starts
+# Start the development server
+CMD ["npm", "run", "dev"]
+
+# Stage 2: Production image with Nginx
+FROM nginx:alpine AS prod
+
+# Copy the custom NGINX config
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Create a non-root user and group, and switch to that user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Expose the port Nginx will serve the app on
+EXPOSE 80
+
+# Copy the build output from the development stage
+COPY --from=dev /app/dist /usr/share/nginx/html
+
+# Switch to non-root user
+USER appuser
+
+# Start nginx when the container starts
 CMD ["nginx", "-g", "daemon off;"]

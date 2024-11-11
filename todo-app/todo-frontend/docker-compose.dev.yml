@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  todo-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev # Use the development target (the Node.js environment)
+    container_name: todo-frontend
+    ports:
+      - "80:80" # Expose the correct port for development (Vite, React Dev Server)
+    volumes:
+      - .:/app
+      - /app/node_modules # Persist node_modules in the container to avoid conflicts
+    environment:
+      - VITE_BACKEND_URL=http://localhost:3000 # Backend URL for development
+    command: npm run dev # Start the development server
+    working_dir: /app # Set the working directory inside the container
