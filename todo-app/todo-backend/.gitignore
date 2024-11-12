@@ -64,3 +64,5 @@ typings/
 /data/db
 redis_data
 ._redis_data
+mongo_data
+._mongo_data
