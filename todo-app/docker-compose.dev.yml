@@ -1,13 +1,13 @@
+version: "3.8"
+
 services:
   # Frontend service
-  todo-frontend:
+  app:
     build:
       context: ./todo-frontend
       dockerfile: dev.Dockerfile
       target: dev
     container_name: todo-frontend
-    ports:
-      - "5173:5173"
     volumes:
       - ./todo-frontend:/app
       - /app/node_modules
@@ -17,40 +17,58 @@ services:
     working_dir: /app
     networks:
       - todo-network
+    # No ports exposed here
 
-  # Backend services
-  todo-backend:
-    extends:
-      file: ./todo-backend/docker-compose.dev.yml
-      service: server
+  # Backend service
+  server:
+    build:
+      context: ./todo-backend
+      dockerfile: dev.Dockerfile
+    container_name: todo-backend
+    volumes:
+      - ./todo-backend:/usr/src/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://the_username:the_password@mongo:27017/the_database?retryWrites=false
+    depends_on:
+      - mongo
+      - redis
     networks:
       - todo-network
+    # No ports exposed here
 
+  # MongoDB service
   mongo:
-    extends:
-      file: ./todo-backend/docker-compose.dev.yml
-      service: mongo
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: the_username
+      MONGO_INITDB_ROOT_PASSWORD: the_password
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - mongo_data:/data/db
     networks:
       - todo-network
 
+  # Redis service
   redis:
-    extends:
-      file: ./todo-backend/docker-compose.dev.yml
-      service: redis
+    image: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
     networks:
       - todo-network
 
   # Nginx reverse proxy
   nginx:
     image: nginx:1.20.1
+    container_name: reverse-proxy
     volumes:
       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "8080:80"
-    container_name: reverse-proxy
+      - "8080:80" # Only Nginx port exposed to host
     depends_on:
-      - todo-frontend
-      - todo-backend
+      - app
+      - server
     networks:
       - todo-network
 
