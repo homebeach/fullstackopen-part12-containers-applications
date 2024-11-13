@@ -1,4 +1,4 @@
-# Stage 1: Development image with Node.js
+# Development image with Node.js
 FROM node:18 AS dev
 
 # Set the working directory in the container
@@ -13,33 +13,21 @@ RUN npm install
 # Copy the rest of the application source code
 COPY . .
 
+# Create a non-root user and group
+RUN addgroup --system devgroup && adduser --system --ingroup devgroup devuser
+
+# Change ownership of the application files to the devuser
+RUN chown -R devuser:devgroup /app
+
 # Set the environment variable for the backend URL
 ARG VITE_BACKEND_URL
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
-# Expose the port for development (typically the dev server runs on port 80)
-EXPOSE 80
+# Expose the Vite port for development
+EXPOSE 5173
+
+# Switch to the non-root user
+USER devuser
 
 # Start the development server
-CMD ["npm", "run", "dev"]
-
-# Stage 2: Production image with Nginx
-FROM nginx:alpine AS prod
-
-# Copy the custom NGINX config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Create a non-root user and group, and switch to that user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Expose the port Nginx will serve the app on
-EXPOSE 80
-
-# Copy the build output from the development stage
-COPY --from=dev /app/dist /usr/share/nginx/html
-
-# Switch to non-root user
-USER appuser
-
-# Start nginx when the container starts
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "dev", "--", "--host"]
