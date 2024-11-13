@@ -4,6 +4,9 @@ FROM node:20 AS dev
 # Set the working directory in the container
 WORKDIR /app
 
+# Install curl and ping (iputils-ping package)
+RUN apt-get update && apt-get install -y curl iputils-ping
+
 # Copy the package.json and package-lock.json to install dependencies
 COPY package*.json ./
 

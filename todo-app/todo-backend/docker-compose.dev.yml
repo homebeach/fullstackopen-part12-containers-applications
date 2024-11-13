@@ -28,6 +28,7 @@ services:
     build:
       context: .
       dockerfile: dev.Dockerfile
+    container_name: todo-backend
     volumes:
       - .:/usr/src/app # Mount the local source code directory
     ports:
