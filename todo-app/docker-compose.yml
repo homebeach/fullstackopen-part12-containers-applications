@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  # Frontend service (running in development mode)
+  todo-frontend:
+    build:
+      context: ./todo-frontend
+      dockerfile: dev.Dockerfile
+    container_name: todo-frontend
+    volumes:
+      - ./todo-frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8080/api
+    command: npm run dev -- --host
+    working_dir: /app
+    networks:
+      - todo-network
+    # No ports exposed
+
+  # Backend service
+  todo-backend:
+    build:
+      context: ./todo-backend
+      dockerfile: Dockerfile
+    container_name: todo-backend
+    volumes:
+      - ./todo-backend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://the_username:the_password@mongo:27017/the_database?retryWrites=false
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - todo-network
+    # No ports exposed
+
+  # MongoDB service
+  mongo:
+    image: mongo
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: the_username
+      MONGO_INITDB_ROOT_PASSWORD: the_password
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - todo-network
+    # No ports exposed
+
+  # Redis service
+  redis:
+    image: redis
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - todo-network
+    # No ports exposed
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:1.20.1
+    container_name: reverse-proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80" # Expose only Nginx on port 80 to the host
+    depends_on:
+      - todo-frontend
+      - todo-backend
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
